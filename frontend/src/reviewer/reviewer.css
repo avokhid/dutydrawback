@@ -1,0 +1,60 @@
+.reviewer-shell {
+  --bg: #10110f;
+  --panel: #181a17;
+  --panel2: #1f221d;
+  --line: #2c302a;
+  --ink: #edefe9;
+  --ink-soft: #a7ac9e;
+  --ink-faint: #6e7567;
+  --pass: #7fb069;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 40px 24px 80px;
+  font-family: var(--sans);
+}
+
+.reviewer-shell * {
+  box-sizing: border-box;
+}
+
+.reviewer-shell button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.reviewer-shell select:focus,
+.reviewer-shell input:focus,
+.reviewer-shell textarea:focus {
+  border-color: #6ba8c9 !important;
+}
+
+.reviewer-brand {
+  max-width: 960px;
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewer-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #d8a24a;
+}
+
+.reviewer-brand span {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviewer-shell * {
+    transition: none !important;
+  }
+}

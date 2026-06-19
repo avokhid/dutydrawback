@@ -1,0 +1,23 @@
+# Secrets — never commit real credentials
+.env
+*.key
+
+# Local databases / persistence
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db

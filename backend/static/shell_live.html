@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drawback — Two-tab shell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#10110F;color:#EDEFE9;font-family:sans-serif}#boot{padding:40px;font-family:monospace;color:#A7AC9E}</style>
+<script src="/static/vendor/react.production.min.js"></script>
+<script src="/static/vendor/react-dom.production.min.js"></script>
+<script src="/static/vendor/babel.min.js"></script>
+</head>
+<body>
+<div id="root"><div id="boot">Loading…</div></div>
+<script>
+  if (window.Babel) {
+    Babel.registerPreset("react-classic", {
+      presets: [[Babel.availablePresets["react"], { runtime: "classic" }]],
+    });
+  }
+  if (!window.React || !window.ReactDOM) {
+    var b = document.getElementById("boot");
+    if (b) b.textContent = "Failed to load React from /static/vendor. Is the backend serving static files?";
+  }
+</script>
+<script type="text/babel" data-presets="react-classic">
+const { useState } = React;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Duty Drawback — Two-tab shell (the unified front door)
+//
+// The app has two surfaces for two audiences; this shell makes the split
+// explicit while letting users move freely between them (a broker may run a
+// quick estimate, then switch to the console to work the claim).
+//
+//   Importer estimate  → the real estimate flow, starting at document upload (/upload)
+//   Reviewer console   → the expert back-office hub (/reviewer — the match reviewer)
+//
+// Rather than restate those screens (which would drift from the real pages),
+// each tab embeds the ACTUAL same-origin page in an iframe. Both stay mounted
+// so switching tabs preserves each surface's state. Same engine underneath;
+// different depth and audience.
+// ─────────────────────────────────────────────────────────────────────────
+
+const C = {
+  bg: "#10110F", line: "#2C302A", ink: "#EDEFE9",
+  inkSoft: "#A7AC9E", inkFaint: "#6E7567", estimator: "#7FB069", reviewer: "#D8A24A",
+};
+const mono = "'JetBrains Mono','SF Mono',ui-monospace,monospace";
+const sans = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+
+const TABS = [
+  { id: "estimate", label: "Importer estimate", sub: "Guided · get a recovery number", color: C.estimator, src: "/upload" },
+  { id: "reviewer", label: "Reviewer console", sub: "Expert · work a claim", color: C.reviewer, src: "/reviewer" },
+];
+
+function Shell() {
+  const [tab, setTab] = useState("estimate");
+  return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: C.bg, fontFamily: sans }}>
+      <style>{`button:hover{filter:brightness(1.08)}`}</style>
+      <div style={{ borderBottom: `1px solid ${C.line}`, background: C.bg, flexShrink: 0 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <span style={{ fontFamily: mono, fontSize: 12.5, letterSpacing: 1, color: C.inkSoft, textTransform: "uppercase", marginRight: 24, padding: "18px 0" }}>
+            Drawback
+          </span>
+          {TABS.map((t) => {
+            const active = t.id === tab;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                background: "none", border: "none", cursor: "pointer", padding: "16px 18px",
+                borderBottom: active ? `2px solid ${t.color}` : "2px solid transparent",
+              }}>
+                <div style={{ fontFamily: sans, fontSize: 14, fontWeight: active ? 600 : 500, color: active ? C.ink : C.inkSoft, textAlign: "left" }}>{t.label}</div>
+                <div style={{ fontFamily: sans, fontSize: 11.5, color: C.inkFaint, marginTop: 2 }}>{t.sub}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, position: "relative" }}>
+        {TABS.map((t) => (
+          <iframe key={t.id} title={t.label} src={t.src} style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%", border: "none",
+            display: t.id === tab ? "block" : "none",
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Shell));
+</script>
+</body>
+</html>

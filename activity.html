@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duty Drawback — Pipeline Activity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#10110F}</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Duty Drawback — Pipeline Activity Feed
+//
+// Renders the live event stream from GET /api/claim/run-stream (SSE). Shows the
+// pipeline working stage by stage — validate, match, calculate — so the user
+// sees what's happening instead of a spinner. This is the observability layer.
+//
+// Design intent (same instrument language as the reviewer): calm, dense, color
+// = meaning. Each stage is a row that lights up as it runs and settles when it
+// completes. A GATE pause (when persistence lands) renders as an amber halt the
+// user can act on; for now the feed runs straight through.
+//
+// This prototype simulates the SSE stream with the same event shapes the real
+// endpoint emits, so it runs without a backend. To wire for real: replace
+// runSimulated() with an EventSource('/api/claim/run-stream') reader.
+// ─────────────────────────────────────────────────────────────────────────
+
+const C = {
+  bg: "#10110F", panel: "#181A17", panel2: "#1F221D", line: "#2C302A",
+  lineSoft: "#23261F", ink: "#EDEFE9", inkSoft: "#A7AC9E", inkFaint: "#6E7567",
+  run: "#6BA8C9", runBg: "#13202722", done: "#7FB069", doneBg: "#1A2417",
+  pause: "#D8A24A", pauseBg: "#241E12", err: "#C16E5A",
+};
+const mono = "'JetBrains Mono','SF Mono',ui-monospace,monospace";
+const sans = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+
+const STAGE_LABELS = {
+  validate: "Checking your documents",
+  match: "Pairing imports to exports",
+  calculate: "Estimating your recovery",
+  done: "Done",
+  parse: "Reading your files",
+};
+
+const SOURCE_DOCS = ["entry_summary_7501.pdf", "export_bol_77.pdf"];
+
+// Event shapes mirror orchestrator.StageEvent.to_json()
+const SCRIPT = [
+  { stage: "validate", status: "running", summary: "Checking your documents: entry_summary_7501.pdf, export_bol_77.pdf", delay: 700 },
+  { stage: "validate", status: "complete", summary: "No problems found — your documents are clean.", detail: { gates: [], warnings: [] }, delay: 900 },
+  { stage: "match", status: "running", summary: "Pairing your imports to the exports you can claim against…", delay: 800 },
+  { stage: "match", status: "complete", summary: "Paired 1 shipment. 1 needs your confirmation before it counts.", detail: { matched: 1, auto_pass: 0, review: 1 }, delay: 1000 },
+  { stage: "calculate", status: "running", summary: "Working out how much you could recover…", delay: 700 },
+  { stage: "calculate", status: "complete", summary: "You could recover about $2,970.00.", detail: { refund: "2970.00" }, delay: 800 },
+  { stage: "done", status: "complete", summary: "All done. Estimated recovery: about $2,970.00.", delay: 0 },
+];
+
+function statusColor(s) {
+  return s === "complete" ? C.done : s === "running" ? C.run : s === "paused" ? C.pause : s === "error" ? C.err : C.inkSoft;
+}
+function statusBg(s) {
+  return s === "complete" ? C.doneBg : s === "running" ? C.runBg : s === "paused" ? C.pauseBg : "transparent";
+}
+
+function ActivityFeed() {
+  const [events, setEvents] = useState([]);
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const timers = useRef([]);
+
+  const run = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    setEvents([]); setDone(false); setRunning(true);
+    let t = 0;
+    SCRIPT.forEach((ev, i) => {
+      t += i === 0 ? 200 : SCRIPT[i - 1].delay;
+      const id = setTimeout(() => {
+        setEvents((prev) => {
+          // collapse running->complete for the same stage into one row that updates
+          const next = [...prev];
+          const idx = next.findIndex((e) => e.stage === ev.stage && e.stage !== "done");
+          if (idx >= 0 && ev.stage !== "done") next[idx] = ev;
+          else next.push(ev);
+          return next;
+        });
+        if (ev.stage === "done") { setRunning(false); setDone(true); }
+      }, t);
+      timers.current.push(id);
+    });
+  };
+
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  const refundEvent = events.find((e) => e.detail && e.detail.refund);
+  const refund = refundEvent ? refundEvent.detail.refund : null;
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, padding: "44px 24px 80px", fontFamily: sans }}>
+      <style>{`*{box-sizing:border-box} button:hover:not(:disabled){filter:brightness(1.1)}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+        .pulsing{animation:pulse 1.1s ease-in-out infinite}
+        @media (prefers-reduced-motion:reduce){.pulsing{animation:none}}`}</style>
+
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: C.run }} />
+          <span style={{ fontFamily: mono, fontSize: 12.5, letterSpacing: 1, color: C.inkSoft, textTransform: "uppercase" }}>
+            Drawback · Pipeline Run
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <h1 style={{ fontFamily: sans, fontSize: 22, fontWeight: 600, color: C.ink, margin: 0 }}>Estimate run</h1>
+            <div style={{ fontFamily: sans, fontSize: 13, color: C.inkSoft, marginTop: 3 }}>
+              Claim DBK-2291 · watch each step as it runs on your documents
+            </div>
+          </div>
+          <button onClick={run} disabled={running} style={{
+            fontFamily: sans, fontSize: 13.5, fontWeight: 500, color: running ? C.inkFaint : C.bg,
+            background: running ? C.panel2 : C.run, border: "none", borderRadius: 8,
+            padding: "9px 18px", cursor: running ? "default" : "pointer",
+          }}>{running ? "Running…" : done ? "Run again" : "Run pipeline"}</button>
+        </div>
+
+        <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 10, padding: "13px 16px", marginBottom: 16 }}>
+          <div style={{ fontFamily: sans, fontSize: 12, color: C.inkFaint, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            Source documents
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {SOURCE_DOCS.map((d) => (
+              <span key={d} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: mono, fontSize: 12.5, color: C.inkSoft, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 6, padding: "5px 10px" }}>
+                <span style={{ color: C.inkFaint }}>▤</span>{d}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden", background: C.panel }}>
+          {events.length === 0 && (
+            <div style={{ padding: "40px 20px", textAlign: "center", fontFamily: sans, fontSize: 13.5, color: C.inkFaint }}>
+              Press “Run pipeline” to watch the stages execute.
+            </div>
+          )}
+          {events.map((ev, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "flex-start", gap: 13, padding: "14px 18px",
+              borderTop: i > 0 ? `1px solid ${C.lineSoft}` : "none",
+              background: statusBg(ev.status),
+            }}>
+              <div className={ev.status === "running" ? "pulsing" : ""} style={{
+                width: 9, height: 9, borderRadius: "50%", marginTop: 5, flexShrink: 0,
+                background: statusColor(ev.status),
+              }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <span style={{ fontFamily: sans, fontSize: 13.5, fontWeight: 500, color: C.ink }}>
+                    {STAGE_LABELS[ev.stage] || ev.stage}
+                  </span>
+                  <span style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: 0.4, textTransform: "uppercase",
+                    color: statusColor(ev.status), border: `1px solid ${statusColor(ev.status)}44`,
+                    borderRadius: 4, padding: "1px 6px" }}>{ev.status}</span>
+                </div>
+                <div style={{ fontFamily: sans, fontSize: 13, color: C.inkSoft, marginTop: 4, lineHeight: 1.5 }}>
+                  {ev.summary}
+                </div>
+                {ev.detail && ev.detail.review > 0 && (
+                  <div style={{ fontFamily: sans, fontSize: 12, color: C.pause, marginTop: 5 }}>
+                    {ev.detail.review} pairing needs your confirmation
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {done && refund && (
+          <div style={{ marginTop: 16, background: C.panel, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.done}`,
+            borderRadius: 10, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: sans, fontSize: 13, color: C.inkSoft }}>Estimated recovery</div>
+              <div style={{ fontFamily: mono, fontSize: 26, fontWeight: 600, color: C.done, marginTop: 2 }}>
+                ${Number(refund).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+            <div style={{ fontFamily: sans, fontSize: 12, color: C.inkFaint, maxWidth: 280, lineHeight: 1.5 }}>
+              Estimate, not a filing. Includes review-tier matches as additional potential.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(ActivityFeed));
+</script></body></html>
