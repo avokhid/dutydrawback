@@ -37,8 +37,8 @@ const { useState, useEffect, useRef } = React;
 //
 // Consumes GET /api/claim/run-stream (Server-Sent Events) and renders each
 // orchestrator StageEvent as it arrives — validate, match, calculate, done.
-// Same design as ActivityFeed.jsx, but reads the real stream instead of the
-// simulated SCRIPT. The stream is closed on the terminal "done" event so the
+// Reads the real stream from the orchestrator. The stream is closed on the
+// terminal "done" event so the
 // browser's EventSource does not auto-reconnect and re-run the pipeline.
 // ─────────────────────────────────────────────────────────────────────────
 

@@ -59,9 +59,8 @@ test environment can't provide — their surrounding logic is unit-tested.
 > engine-backed refund, the customer-facing recovery estimate, the live pipeline
 > stream, and the up-front drawback-type selection (`/api/drawback-types` +
 > `drawback_type` on the run) now feed the same-origin UIs, while our backend
-> keeps the extraction pipeline and UI serving. The original `EstimateReport.jsx` /
-> `estimate.html` / `ActivityFeed.jsx` / `activity.html` remain as the
-> sample-data design source.
+> keeps the extraction pipeline and UI serving. The integrated versions live in
+> `frontend/src/reviewer/` (Vite) and `backend/static/*_live.html` (no-build).
 >
 > The ruling and advisory tiers that `rule_tiers.py` named but left empty are now
 > backed by real modules — `rulings.py` (CROSS ruling retrieval), `cross_connector.py`
@@ -73,7 +72,8 @@ test environment can't provide — their surrounding logic is unit-tested.
 > from Claude's `api.py` snapshot were likewise merged in rather than run as a
 > second server: `POST /api/manufacturing/estimate` (+ `/bom` UI), the `/api/claims*`
 > persistence endpoints (`persistence.py`), and the standalone `validate_extraction.py`
-> harness (`VALIDATION_18.md`). `bom.html` / `BomEntry.jsx` remain the design source.
+> harness (`VALIDATION_18.md`). The integrated BOM UI lives at `/bom`
+> (`backend/static/bom_live.html`) and `frontend/src/reviewer/BomEntry.tsx`.
 
 ## Run it
 
@@ -302,10 +302,3 @@ to highlight.
 - **ACE filing integration** — needs ABI/CBP certification.
 - **Document long-tail hardening** — rotated scans, odd vendor formats (use `degrade_pdf.py` to stress-test, but real samples are the true validation).
 - **Cost/latency at scale** — batch processing, prompt caching.
-
-## Batch READMEs
-
-Earlier batches left standalone notes when filenames would clash:
-
-- `README_3.md` — batch 3 backend core overview
-- `README_4.md` — batch 4 reviewer UI prototype (`App.jsx`, `reviewer.html`); integrated into `frontend/src/reviewer/`
